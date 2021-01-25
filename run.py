@@ -157,33 +157,33 @@ class DataTrainingArguments:
     min_summ_length: Optional[int] = field(
         default=100,
         metadata={
-            "help": "Minimum Summarization Output Length"
+            "help": "The minimum length of the sequence to be generated."
         },
     )
     max_summ_length: Optional[int] = field(
         default=300,
         metadata={
-            "help": "Maximum Summarization Output Length"
+            "help": "The maximum length of the sequence to be generated."
         },
     )
 
     num_beams: Optional[int] = field(
-        default=4,
+        default=3,
         metadata={
-            "help": "Num Beams"
+            "help": "Number of beams for beam search. 1 means no beam search."
         },
     )
     length_penalty: Optional[float] = field(
         default=1.0,
         metadata={
-            "help": "Length Penalty"
+            "help": "Exponential penalty to the length. 1.0 means no penalty. Set to values < 1.0 in order to encourage the model to generate shorter sequences, to a value > 1.0 in order to encourage the model to produce longer sequences."
         },
     )
 
     no_repeat_ngram_size: Optional[int] = field(
-        default=3,
+        default=2,
         metadata={
-            "help": "No repeat ngram size"
+            "help": " If set to int > 0, all ngrams of that size can only occur once."
         },
     )
 
