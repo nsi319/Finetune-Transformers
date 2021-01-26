@@ -153,40 +153,6 @@ class DataTrainingArguments:
             "than this will be truncated, sequences shorter will be padded."
         },
     )
-
-    min_summ_length: Optional[int] = field(
-        default=100,
-        metadata={
-            "help": "The minimum length of the sequence to be generated."
-        },
-    )
-    max_summ_length: Optional[int] = field(
-        default=300,
-        metadata={
-            "help": "The maximum length of the sequence to be generated."
-        },
-    )
-
-    num_beams: Optional[int] = field(
-        default=3,
-        metadata={
-            "help": "Number of beams for beam search. 1 means no beam search."
-        },
-    )
-    length_penalty: Optional[float] = field(
-        default=1.0,
-        metadata={
-            "help": "Exponential penalty to the length. 1.0 means no penalty. Set to values < 1.0 in order to encourage the model to generate shorter sequences, to a value > 1.0 in order to encourage the model to produce longer sequences."
-        },
-    )
-
-    no_repeat_ngram_size: Optional[int] = field(
-        default=2,
-        metadata={
-            "help": " If set to int > 0, all ngrams of that size can only occur once."
-        },
-    )
-
     val_max_target_length: Optional[int] = field(
         default=None,
         metadata={
@@ -248,6 +214,42 @@ class DataTrainingArguments:
         if self.val_max_target_length is None:
             self.val_max_target_length = self.max_target_length
 
+@dataclass
+class DataValidationArguments:
+    min_summ_length: Optional[int] = field(
+        default=100,
+        metadata={
+            "help": "The minimum length of the sequence to be generated."
+        },
+    )
+    max_summ_length: Optional[int] = field(
+        default=300,
+        metadata={
+            "help": "The maximum length of the sequence to be generated."
+        },
+    )
+
+    num_beams: Optional[int] = field(
+        default=3,
+        metadata={
+            "help": "Number of beams for beam search. 1 means no beam search."
+        },
+    )
+    length_penalty: Optional[float] = field(
+        default=1.0,
+        metadata={
+            "help": "Exponential penalty to the length. 1.0 means no penalty. Set to values < 1.0 in order to encourage the model to generate shorter sequences, to a value > 1.0 in order to encourage the model to produce longer sequences."
+        },
+    )
+
+    no_repeat_ngram_size: Optional[int] = field(
+        default=2,
+        metadata={
+            "help": " If set to int > 0, all ngrams of that size can only occur once."
+        },
+    )
+
+
 
 summarization_name_mapping = {
     "amazon_reviews_multi": ("review_body", "review_title"),
@@ -269,13 +271,13 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, Seq2SeqTrainingArguments))
+    parser = HfArgumentParser((ModelArguments, DataTrainingArguments,DataValidationArguments, Seq2SeqTrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, test_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+        model_args, data_args, test_args, training_args = parser.parse_args_into_dataclasses()
 
     if (
         os.path.exists(training_args.output_dir)
@@ -439,6 +441,8 @@ def main():
             inputs = examples[text_column]
             targets = examples[summary_column]
         inputs = [prefix + inp for inp in inputs]
+
+        # Tokenize Input
         model_inputs = tokenizer(inputs, max_length=data_args.max_source_length, padding=padding, truncation=True)
 
         # Setup the tokenizer for targets
@@ -533,6 +537,7 @@ def main():
 
     # Training
     if training_args.do_train:
+
         train_result = trainer.train(
             model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
         )
@@ -566,8 +571,8 @@ def main():
         output = []
         inco = 0
 
-        min_length = data_args.min_summ_length
-        max_length = data_args.max_summ_length
+        min_length = test_args.min_summ_length
+        max_length = test_args.max_summ_length
 
         df_test = pd.read_csv(data_args.validation_file)
 
@@ -578,9 +583,9 @@ def main():
             input_tokenized = tokenizer.encode(text, return_tensors='pt',max_length=data_args.max_source_length, truncation=True).to(device)
             dim = list(input_tokenized.size())
             summary_ids = model.generate(input_tokenized,
-                                                num_beams=data_args.num_beams,
-                                                no_repeat_ngram_size=data_args.no_repeat_ngram_size,
-                                                length_penalty=data_args.length_penalty,
+                                                num_beams=test_args.num_beams,
+                                                no_repeat_ngram_size=test_args.no_repeat_ngram_size,
+                                                length_penalty=test_args.length_penalty,
                                                 min_length=min_length,
                                                 max_length=max_length,
                                                 early_stopping=True)
