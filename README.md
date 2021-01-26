@@ -4,7 +4,7 @@
 
 
 ## Script 
-Finetuning with custom dataset placed at [`data/`]:
+Finetuning with custom dataset placed at [`data/`](https://github.com/nsi319/Finetune-Transformers/tree/main/data):
 
 ```bash
 python run.py \
