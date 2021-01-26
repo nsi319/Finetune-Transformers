@@ -1,9 +1,11 @@
 # Finetune-Transformers
 
 ## Finetuning and evaluating transformers on summarization task
+The main objective of this module is to fine-tune and evaluate a model (pre-trained on a large-scale dataset) on domain-specific data. Finetuning will improve the performance of the model on domain specific tasks. 
+The pre-trained models can be finetuned on a number of downstream tasks based on their architecture. Here, I have taken an example of finetuing sequence-to-sequence models such as T5, BART, Pegasus on an abstractive summarization task. 
 
 
-## Script 
+## Script
 Finetuning with custom dataset placed at [`data/`](https://github.com/nsi319/Finetune-Transformers/tree/main/data):
 
 ```bash
