@@ -1,40 +1,18 @@
-# coding=utf-8
-# Copyright The HuggingFace Team and The HuggingFace Inc. team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
 """
-Fine-tuning the library models for sequence to sequence.
+The core codes of this file i.e., the classes ModelArguments, Seq2SeqTrainer (Trainer API), Seq2SeqTrainingArguments are from https://github.com/huggingface/transformers
 """
-# You can also adapt this script on your own sequence to sequence task. Pointers for this are left as comments.
 
 import logging
 import os
+cur_file = os.path.realpath(__file__)
+
 import re
 import sys
-from dataclasses import dataclass, field
-from typing import Optional
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
-
-
-
-
-cur_file = os.path.realpath(__file__)
-# print(cur_file)
-
-
 
 import transformers
 from transformers import (
@@ -49,8 +27,11 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
+
 from transformers.trainer_utils import is_main_process
 from datasets import load_dataset, load_metric
+from dataclasses import dataclass, field
+from typing import Optional
 
 from rouge_score import rouge_scorer
 
@@ -69,7 +50,6 @@ class ModelArguments:
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
-
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
@@ -110,7 +90,7 @@ class DataTrainingArguments:
         default="summarization",
         metadata={
             "help": "The name of the task, should be summarization (or summarization_{dataset} for evaluating "
-            "pegasus) or translation (or translation_{xx}_to_{yy})."
+            "pegasus)"
         },
     )
     dataset_name: Optional[str] = field(
@@ -184,9 +164,6 @@ class DataTrainingArguments:
             "value if set."
         },
     )
-    source_lang: Optional[str] = field(default=None, metadata={"help": "Source language id for translation."})
-    target_lang: Optional[str] = field(default=None, metadata={"help": "Target language id for translation."})
-    eval_beams: Optional[int] = field(default=None, metadata={"help": "Number of beams to use for evaluation."})
     ignore_pad_token_for_loss: bool = field(
         default=True,
         metadata={
@@ -207,15 +184,18 @@ class DataTrainingArguments:
             if self.validation_file is not None:
                 extension = self.validation_file.split(".")[-1]
                 assert extension in ["csv", "json"], "`validation_file` should be a csv or a json file."
-        if not self.task.startswith("summarization") and not self.task.startswith("translation"):
+        if not self.task.startswith("summarization"):
             raise ValueError(
-                "`task` should be summarization, summarization_{dataset}, translation or translation_{xx}_to_{yy}."
+                "`task` should be summarization or summarization_{dataset}"
             )
         if self.val_max_target_length is None:
             self.val_max_target_length = self.max_target_length
 
 @dataclass
 class DataValidationArguments:
+    """
+    Arguments pertaining to what parameters we are going to input to our model for validation.
+    """
     min_summ_length: Optional[int] = field(
         default=100,
         metadata={
@@ -267,14 +247,10 @@ summarization_name_mapping = {
 
 
 def main():
-    # See all possible arguments in src/transformers/training_args.py
-    # or by passing the --help flag to this script.
-    # We now keep distinct sets of args, for a cleaner separation of concerns.
+
 
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments,DataValidationArguments, Seq2SeqTrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-        # If we pass only one argument to the script and it's the path to a json file,
-        # let's parse it to get our arguments.
         model_args, data_args, test_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, test_args, training_args = parser.parse_args_into_dataclasses()
@@ -310,18 +286,6 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Get the datasets: you can either provide your own CSV/JSON training and evaluation files (see below)
-    # or just provide the name of one of the public datasets available on the hub at https://huggingface.co/datasets/
-    # (the dataset will be downloaded automatically from the datasets Hub).
-    #
-    # For CSV/JSON files in the summarization task, this script will use the first column for the full texts and the
-    # second column for the summaries (unless you specify column names for this with the `text_column` and
-    # `summary_column` arguments).
-    # For translation, only JSON files are supported, with one field named "translation" containing two keys for the
-    # source and target languages (unless you adapt what follows).
-    #
-    # In distributed training, the load_dataset function guarantee that only one local process can concurrently
-    # download the dataset.
     if data_args.dataset_name is not None:
         # Downloading and loading a dataset from the hub.
         datasets = load_dataset(data_args.dataset_name, data_args.dataset_config_name)
@@ -334,14 +298,8 @@ def main():
             data_files["validation"] = data_args.validation_file
             extension = data_args.validation_file.split(".")[-1]
         datasets = load_dataset(extension, data_files=data_files)
-    # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
-    # https://huggingface.co/docs/datasets/loading_datasets.html.
 
-    # Load pretrained model and tokenizer
-    #
-    # Distributed training:
-    # The .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
+
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -387,17 +345,10 @@ def main():
     else:
         column_names = datasets["validation"].column_names
 
-    # For translation we set the codes of our source and target languages (only useful for mBART, the others will
-    # ignore those attributes).
-    if data_args.task.startswith("translation"):
-        if data_args.source_lang is not None:
-            tokenizer.src_lang = data_args.source_lang
-        if data_args.target_lang is not None:
-            tokenizer.tgt_lang = data_args.target_lang
 
     # To serialize preprocess_function below, each of those four variables needs to be defined (even if we won't use
     # them all).
-    source_lang, target_lang, text_column, summary_column = None, None, None, None
+    text_column, summary_column = None, None
 
     if data_args.task.startswith("summarization"):
         # Get the column names for input/target.
@@ -410,36 +361,15 @@ def main():
             summary_column = dataset_columns[1] if dataset_columns is not None else column_names[1]
         else:
             summary_column = data_args.summary_column
-    else:
-        # Get the language codes for input/target.
-        lang_search = re.match("translation_([a-z]+)_to_([a-z]+)", data_args.task)
-        if data_args.source_lang is not None:
-            source_lang = data_args.source_lang.split("_")[0]
-        else:
-            assert (
-                lang_search is not None
-            ), "Provide a source language via --source_lang or rename your task 'translation_xx_to_yy'."
-            source_lang = lang_search.groups()[0]
-
-        if data_args.target_lang is not None:
-            target_lang = data_args.target_lang.split("_")[0]
-        else:
-            assert (
-                lang_search is not None
-            ), "Provide a target language via --target_lang or rename your task 'translation_xx_to_yy'."
-            target_lang = lang_search.groups()[1]
 
     # Temporarily set max_target_length for training.
     max_target_length = data_args.max_target_length
     padding = "max_length" if data_args.pad_to_max_length else False
 
     def preprocess_function(examples):
-        if data_args.task.startswith("translation"):
-            inputs = [ex[source_lang] for ex in examples["translation"]]
-            targets = [ex[target_lang] for ex in examples["translation"]]
-        else:
-            inputs = examples[text_column]
-            targets = examples[summary_column]
+
+        inputs = examples[text_column]
+        targets = examples[summary_column]
         inputs = [prefix + inp for inp in inputs]
 
         # Tokenize Input
@@ -492,7 +422,7 @@ def main():
         data_collator = DataCollatorForSeq2Seq(tokenizer, label_pad_token_id=label_pad_token_id)
 
     # Metric
-    metric_name = "rouge" if data_args.task.startswith("summarization") else "sacrebleu"
+    metric_name = "rouge" 
     metric = load_metric(metric_name)
 
     def compute_metrics(eval_preds):
@@ -560,13 +490,9 @@ def main():
 
         model = trainer.model
         tokenizer = trainer.tokenizer
-        
         print("\n")
-
         print("Running Evaluation Script")
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
 
         output = []
         inco = 0
@@ -575,7 +501,6 @@ def main():
         max_length = test_args.max_summ_length
 
         df_test = pd.read_csv(data_args.validation_file)
-
 
         for index,row in tqdm(df_test.iterrows()):
             text = row['Text']
@@ -599,27 +524,19 @@ def main():
         
         print("Evaluation Completed")
 
-
-
         precision = [round(x[0],4) for x in output]
-
         fmeasure = [round(evaluate_summary(x[1],x[2]).fmeasure,4) for x in output]
-
         actual = [x[1] for x in output]
-
         generated = [re.sub(r'nnn*n', '',x[2]) for x in output]
 
         df = pd.DataFrame({'Generated Summary':generated,'Actual Summary':actual, 'Precision': precision, 'F Score': fmeasure})
-
         csv_output = os.path.join(training_args.output_dir, str(len(df_test)) +  "-test_results.csv")
         df.to_csv(csv_output)
 
         print("Evaluation results saved in {}".format(csv_output))
 
         output_df = pd.read_csv(csv_output)
-
         length_df = len(output_df)
-
         top = 10
         if length_df < 20:
             top = int(length_df/2) - 1
@@ -633,7 +550,6 @@ def main():
 
         fsc = np.mean([t[3] for t in output_desc])
         pre = np.mean([t[0] for t in output_desc])
-
 
         output_eval_file = os.path.join(training_args.output_dir, "evaluation_scores.txt")
         if trainer.is_world_process_zero():
