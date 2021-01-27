@@ -1,8 +1,8 @@
 # Finetune-Transformers
 
 ## Finetuning and evaluating transformers on summarization task
-The main objective of this module is to fine-tune and evaluate a model (pre-trained on a large-scale dataset) on domain-specific data. Finetuning will improve the performance of the model on domain specific tasks. 
-The pre-trained models can be finetuned on a number of downstream tasks based on their architecture. Here, I have taken an example of finetuing sequence-to-sequence models such as T5, BART, Pegasus on an abstractive summarization task. 
+The main objective of this module is to fine-tune and evaluate a model (pre-trained on a large-scale dataset) on domain-specific data. Finetuning will improve the performance of the model on domain specific tasks. The pre-trained models can be finetuned on a number of downstream tasks based on their architecture. 
+Here, I have taken an example of finetuing sequence-to-sequence models such as T5, BART, Pegasus on an abstractive summarization task using the Trainer API from [Hugging Face](https://huggingface.co/transformers/main_classes/trainer.html).
 
 
 ## Script
@@ -21,10 +21,24 @@ python run.py \
     --do_eval \
     --num_beams=3 \
     --min_summ_length=100 \     
-    --max_summ_length=320 \   
+    --max_summ_length=250 \   
     --length_penalty=1.0 \
     --per_device_train_batch_size=4 \
     --per_device_eval_batch_size=4 \
     --predict_with_generate 
 ```
+
+To see all the possible command line options, run:
+
+```bash
+python run.py --help
+```
+
+* A number of pre-trained models can be finetuned such as:
+    * T5 (small, base, large, 3B, 11B)
+    * BART (base, large-cnn, large-mnli)
+    * Pegasus (large, xsum, multi_news)
+
+***
+Checkout [pre-trained models](https://huggingface.co/models) to see the checkpoints available for each of them.
 
