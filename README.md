@@ -34,6 +34,8 @@ To see all the possible command line options, run:
 python run.py --help
 ```
 
+If you are using Google Colab, open [`finetuning.ipynb`](https://github.com/nsi319/Finetune-Transformers/blob/main/finetuning.ipynb) notebook and follow the instructions.
+
 * A number of pre-trained models can be finetuned such as:
     * T5 (small, base, large, 3B, 11B)
     * BART (base, large-cnn, large-mnli)
