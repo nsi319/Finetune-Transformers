@@ -2,9 +2,15 @@
 
 ## Finetuning and evaluating transformers on summarization task
 The main objective of this module is to fine-tune and evaluate a model (pre-trained on a large-scale dataset) on domain-specific data. Finetuning will improve the performance of the model on domain specific tasks. The pre-trained models can be finetuned on a number of downstream tasks based on their architecture. 
-Here, I have taken an example of finetuing sequence-to-sequence models such as T5, BART, Pegasus on an abstractive summarization task using the Trainer API from [Hugging Face](https://huggingface.co/transformers/main_classes/trainer.html).
+Here, I have taken an example of finetuning sequence-to-sequence models such as T5, BART, Pegasus on an abstractive summarization task using the Trainer API from [Hugging Face](https://huggingface.co/transformers/main_classes/trainer.html).
 
+* A number of pre-trained models can be finetuned such as:
+    * T5 (small, base, large, 3B, 11B)
+    * BART (base, large-cnn, large-mnli)
+    * Pegasus (large, xsum, multi_news)
 
+Checkout [pre-trained models](https://huggingface.co/models) to see the checkpoints available for each of them.
+***
 ## Script
 Finetuning with custom dataset placed at [`data/`](https://github.com/nsi319/Finetune-Transformers/tree/main/data):
 
@@ -33,14 +39,6 @@ To see all the possible command line options, run:
 ```bash
 python run.py --help
 ```
+If you are using **Google Colab**, Open [`colab/finetuning.ipynb`](https://github.com/nsi319/Finetune-Transformers/blob/main/colab/finetuning.ipynb) in Colab, save a copy in Drive and follow the instructions.
 
-If you are using Google Colab, open [`finetuning.ipynb`](https://github.com/nsi319/Finetune-Transformers/blob/main/finetuning.ipynb) notebook and follow the instructions.
-
-* A number of pre-trained models can be finetuned such as:
-    * T5 (small, base, large, 3B, 11B)
-    * BART (base, large-cnn, large-mnli)
-    * Pegasus (large, xsum, multi_news)
-
-***
-Checkout [pre-trained models](https://huggingface.co/models) to see the checkpoints available for each of them.
 
