@@ -7,6 +7,7 @@ Here, I have taken an example of finetuning sequence-to-sequence models such as 
 * A number of pre-trained models can be finetuned such as:
     * T5 (small, base, large, 3B, 11B)
     * BART (base, large-cnn, large-mnli)
+    * Longformer Encoder Decoder (allenai/led-base-16384, allenai/led-large-16384)
     * Pegasus (large, xsum, multi_news)
 
 Checkout [pre-trained models](https://huggingface.co/models) to see the checkpoints available for each of them.

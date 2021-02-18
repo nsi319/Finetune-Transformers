@@ -502,7 +502,7 @@ def main():
 
         df_test = pd.read_csv(data_args.validation_file)
 
-        for index,row in tqdm(df_test.iterrows()):
+        for index,row in tqdm(df_test.iterrows(), total=df_test.shape[0]):
             text = row['Text']
             ref = row['Summary']  
             input_tokenized = tokenizer.encode(text, return_tensors='pt',max_length=data_args.max_source_length, truncation=True).to(device)
